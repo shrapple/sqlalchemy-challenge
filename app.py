@@ -33,10 +33,13 @@ app = Flask(__name__)
 app.debug = True 
 if __name__ == "__main__":
     app.run()
+
+
 #################################################
 # Flask Routes
 #################################################
 
+# creating 'homepage' menu options
 @app.route("/")
 def welcome():
     """List all available api routes."""
@@ -48,13 +51,14 @@ def welcome():
         f'/api/v1.0/[start]<br/>'
         f'/api/v1.0/[start]/[end]'
     )
-
+# first menu option-- showing precipitation information for the most current 12 months
 @app.route('/api/v1.0/precipitation')
 def precipitation():   
     results = session.query(MS.date, MS.prcp).filter(MS.date>='2016-08-23').all()
     return jsonify({d:p for d,p in results})
     session.close()
 
+# second menu option-- showing each station
 @app.route('/api/v1.0/stations')
 def stations():
     results = session.query(MS.station).all()
@@ -62,6 +66,8 @@ def stations():
     return jsonify(list(stations))
     session.close()
 
+# third menu option-- shows the most active station's temperature recordings
+# from the current 12 months
 @app.route('/api/v1.0/tobs')
 def tobs():
     station = 'USC00519281'
@@ -71,23 +77,12 @@ def tobs():
     return jsonify(active)
     session.close()
 
-def get_temp_stats_start(start):
-    start_date = datetime.strptime(start, "%Y-%m-%d")
-    temps = session.query(func.min(MS.tobs),
-                          func.avg(MS.tobs),
-                          func.max(MS.tobs)).\
-                filter(MS.date >= start_date).all()
-    min_temp, avg_temp, max_temp = temps[0]
-    return jsonify({
-        'min': min_temp,
-        'avg': avg_temp,
-        'max': max_temp
-    })
+# fourth menu option-- shows the average, minimum, and maximum temps since the date inputed
 @app.route('/api/v1.0/<start>')
 def start(start):
     start_date = datetime.strptime(start, "%Y-%m-%d")
-    temps = session.query(func.min(MS.tobs),
-                          func.avg(MS.tobs),
+    temps = session.query(func.avg(MS.tobs),
+                          func.min(MS.tobs),
                           func.max(MS.tobs)).\
                 filter(MS.date >= start_date).all()
     if temps:
@@ -99,6 +94,8 @@ def start(start):
         }
     session.close()
 
+# fifth menu option-- shows the average, minimum, and maximum temps
+# to occur between the two dates inputed
 @app.route('/api/v1.0/<start>/<end>')
 def get_temp_stats_start_end(start, end):
     start_date = datetime.strptime(start, "%Y-%m-%d")
