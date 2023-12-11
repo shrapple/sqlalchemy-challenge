@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 from flask import Flask
 from flask import jsonify
+from datetime import datetime
 
 #################################################
 # Database Setup
@@ -29,7 +30,9 @@ session = Session(engine)
 # Flask Setup
 #################################################
 app = Flask(__name__)
-
+app.debug = True 
+if __name__ == "__main__":
+    app.run()
 #################################################
 # Flask Routes
 #################################################
@@ -67,3 +70,53 @@ def tobs():
     active = [{'station': a, 'tobs': b, 'date': c} for a, b, c in active_station]
     return jsonify(active)
     session.close()
+
+def get_temp_stats_start(start):
+    start_date = datetime.strptime(start, "%Y-%m-%d")
+    temps = session.query(func.min(MS.tobs),
+                          func.avg(MS.tobs),
+                          func.max(MS.tobs)).\
+                filter(MS.date >= start_date).all()
+    min_temp, avg_temp, max_temp = temps[0]
+    return jsonify({
+        'min': min_temp,
+        'avg': avg_temp,
+        'max': max_temp
+    })
+@app.route('/api/v1.0/<start>')
+def start(start):
+    start_date = datetime.strptime(start, "%Y-%m-%d")
+    temps = session.query(func.min(MS.tobs),
+                          func.avg(MS.tobs),
+                          func.max(MS.tobs)).\
+                filter(MS.date >= start_date).all()
+    if temps:
+        min_temp, avg_temp, max_temp = temps[0]
+    return {
+            'min': min_temp,
+            'avg': avg_temp,
+            'max': max_temp
+        }
+    session.close()
+
+@app.route('/api/v1.0/<start>/<end>')
+def get_temp_stats_start_end(start, end):
+    start_date = datetime.strptime(start, "%Y-%m-%d")
+    end_date = datetime.strptime(end, "%Y-%m-%d")
+    temps = session.query(func.min(MS.tobs),
+                          func.avg(MS.tobs),
+                          func.max(MS.tobs)).\
+                filter(MS.date >= start_date, MS.date <= end_date).all()
+    if temps:
+        min_temp, avg_temp, max_temp = temps[0]
+        return {
+            'min': min_temp,
+            'avg': avg_temp,
+            'max': max_temp
+        }
+    else:
+        return {
+            'error': 'no data for you'
+        }
+    session.close()
+
